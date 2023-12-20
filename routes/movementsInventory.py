@@ -59,14 +59,56 @@ def get_movement(id: int):
     else:
         return {"MovimientoID": movement[0], "ProductoID": movement[1], "Cantidad": movement[2], "Fecha": movement[3]}
 
+@movementsInventory.post("/movimientos")
+def create_movimiento(movimiento: MovimientoInventarioSchema):
+    new_movimiento_data = movimiento.dict()
+
+    try:
+        # Iniciar la transacción
+        with conn.begin() as transaction:
+            # Insertar el nuevo movimiento en la tabla MovimientoInventario
+            conn.execute(MovimientoInventario.insert().values(new_movimiento_data))
+            
+            # Verificar si el producto existe
+            producto = conn.execute(productos.select().where(productos.c.ProductoID == movimiento.ProductoID)).fetchone()
+            if not producto:
+                raise HTTPException(status_code=404, detail="Producto no encontrado.")
+            
+            # Actualizar el stock según el tipo de movimiento
+            if movimiento.TipoMovimiento == "Entrada":
+                print("entrada")
+                conn.execute(productos.update().values({"Stock": producto.Stock + movimiento.Cantidad}).where(productos.c.ProductoID == movimiento.ProductoID))
+                print("entrada hecho")
+            elif movimiento.TipoMovimiento == "Salida":
+                if producto.Stock < movimiento.Cantidad:
+                    raise HTTPException(status_code=400, detail="La cantidad de salida es mayor que el stock actual.")
+                conn.execute(productos.update().values({"Stock": productos.c.Stock - movimiento.Cantidad}).where(productos.c.ProductoID == movimiento.ProductoID))
+
+        return {"message": "Movimiento de inventario creado exitosamente", "tipo": movimiento.TipoMovimiento}
+    except Exception as e:
+        print(f"Error durante la inserción: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 
+"""
 @movementsInventory.post("/movimientos")
 def create_movimiento(movimiento: MovimientoInventarioSchema):
     new_movimiento_data = movimiento.dict()
     transaction = conn.begin()
     try:
         conn.execute(MovimientoInventario.insert().values(new_movimiento_data))
+         # Verificar si el producto existe
+        producto = db.query(productos).filter(productos.c.ProductoID == movimiento.ProductoID).first()
+        if not producto:
+            raise HTTPException(status_code=404, detail="Producto no encontrado.")
+
+    # Actualizar el stock según el tipo de movimiento
+        if movimiento.TipoMovimiento == "entrada":
+            producto.Stock += movimiento.Cantidad
+        elif movimiento.TipoMovimiento == "salida":
+            if producto.Stock < movimiento.Cantidad:
+                raise HTTPException(status_code=400, detail="La cantidad de salida es mayor que el stock actual.")
+            producto.Stock -= movimiento.Cantidad
         transaction.commit()
         transaction.close()
     except Exception as e:
@@ -75,7 +117,7 @@ def create_movimiento(movimiento: MovimientoInventarioSchema):
         print(f"Error durante la inserción: {e}")
 
     return {"message": "Movimiento de inventario creado exitosamente", "tipo": movimiento.TipoMovimiento}
-
+"""
 @movementsInventory.put("/movimientos/{movimiento_id}")
 def update_movimiento(movimiento_id: int, movimiento: MovimientoInventarioSchema):
     updated_movimiento_data = movimiento.dict()
