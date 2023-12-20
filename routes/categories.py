@@ -81,5 +81,6 @@ def delete_category(category_id: int):
         transaction.rollback()
         transaction.close()
         print(f"Error durante la eliminación: {e}")
+        return e
 
     return {"message": "Categoría eliminada exitosamente", "category_id": category_id}

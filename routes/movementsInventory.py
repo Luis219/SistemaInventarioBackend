@@ -74,15 +74,7 @@ def create_movimiento(movimiento: MovimientoInventarioSchema):
             if not producto:
                 raise HTTPException(status_code=404, detail="Producto no encontrado.")
             
-            # Actualizar el stock según el tipo de movimiento
-            if movimiento.TipoMovimiento == "Entrada":
-                print("entrada")
-                conn.execute(productos.update().values({"Stock": producto.Stock + movimiento.Cantidad}).where(productos.c.ProductoID == movimiento.ProductoID))
-                print("entrada hecho")
-            elif movimiento.TipoMovimiento == "Salida":
-                if producto.Stock < movimiento.Cantidad:
-                    raise HTTPException(status_code=400, detail="La cantidad de salida es mayor que el stock actual.")
-                conn.execute(productos.update().values({"Stock": productos.c.Stock - movimiento.Cantidad}).where(productos.c.ProductoID == movimiento.ProductoID))
+            
 
         return {"message": "Movimiento de inventario creado exitosamente", "tipo": movimiento.TipoMovimiento}
     except Exception as e:

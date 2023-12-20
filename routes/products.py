@@ -76,8 +76,6 @@ def post_products(product: Producto):
         del new_product_data["id"]
 
     print("Datos a insertar:", new_product_data)
-
-    
     try:
         conn.execute(productos.insert().values(new_product_data))
         transaction.commit()
@@ -125,16 +123,23 @@ def delete_product(product_id: int):
     # Eliminar el producto de la base de datos
     
     transaction = conn.begin()
-    stmt = productos.delete().where(productos.c.ProductoID == product_id)
-    result = conn.execute(stmt)
-    transaction.commit()
-    transaction.close()
-    
+    try:
+
+        stmt = productos.delete().where(productos.c.ProductoID == product_id)
+        result = conn.execute(stmt)
+        transaction.commit()
+        transaction.close()
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+    except Exception as e:
+        transaction.rollback()
+        transaction.close()
+        print(f"Error durante la eliminación: {e}")
+        return e
 
 
     # Verificar si el producto fue eliminado correctamente
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
+   
     
     return {"message": "Producto eliminado exitosamente", "product_id": product_id}
     
